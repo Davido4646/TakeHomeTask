@@ -1,0 +1,46 @@
+name: brimble-takehome
+
+services:
+  caddy:
+    image: caddy:2.8
+    command: caddy run --config /etc/caddy/caddy.json
+    ports:
+      - "8080:80"
+    volumes:
+      - ./infra/caddy/caddy.json:/etc/caddy/caddy.json:ro
+    networks:
+      - platform
+
+  api:
+    build:
+      context: ./apps/api
+    environment:
+      PORT: "4000"
+      DATA_DIR: /data
+      SAMPLE_APP_DIR: /sample-app
+      CADDY_ADMIN_URL: http://caddy:2019
+      DOCKER_NETWORK: brimble-takehome_platform
+      PUBLIC_BASE_URL: http://localhost:8080
+      DEPLOYMENT_PORT: "3000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./.brimble-data:/data
+      - ./sample-app:/sample-app:ro
+    depends_on:
+      - caddy
+    networks:
+      - platform
+
+  web:
+    build:
+      context: ./apps/web
+    environment:
+      VITE_API_BASE: /api
+      VITE_EVENTS_BASE: /events
+    networks:
+      - platform
+
+networks:
+  platform:
+    driver: bridge
+
